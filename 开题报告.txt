@@ -1,0 +1,251 @@
+
+
+实习单位名称	西安电子科技大学
+实习岗位	软件工程师
+实习实践模式	校内
+计划实习时间	2026年1月-2026年12月
+论文类型	技术论文
+选题来源	国家自然科学基金项目
+中
+文
+摘
+要	随着大语言模型智能体在外部工具调用与信息检索领域的深入应用，间接提示注入攻击已演变为威胁系统安全的核心挑战。攻击者通过在检索源中植入隐蔽指令，诱导智能体偏离用户原始意图，执行非授权操作。然而，现有防御机制主要存在以下几方面局限性：（1）前置检测模型推理延迟高，实时交互效果不理想。（2）单一模态防御存在盲区，对隐蔽的数据泄露与逻辑陷阱类攻击泛化能力弱。（3）防御策略缺乏自适应性，静态阈值机制难以兼顾防御强度与系统可用性。
+针对上述问题，本文聚焦基于意图流转一致性的间接注入动态防御研究，拟通过构建从感知输入到动作执行的全链路意图守卫机制，旨在解决上述挑战。
+针对前置检测推理延迟高的问题，拟设计敏捷感知模块，采用基于重叠滑动窗口的轻量化类BERT分类器，并结合困惑度过滤器，实现对显式指令与对抗性乱码攻击的精准拦截，显著降低防御时延。针对单一模态防御泛化能力弱的问题，拟提出基于混合专家的双环验证方法，通过反射式智能体实现意图修正，融合语义一致性度量与逻辑对齐检测，填补对数据泄露及隐蔽逻辑陷阱的检测盲区。针对防御策略缺乏自适应性的问题，拟提出动态风险仲裁算法，依据感知层输出的风险标签，自适应调整防御仲裁层的通过阈值与审计深度，在高风险场景自动收紧审查标准，实现系统安全性与可用性的动态平衡。
+
+二、选题依据
+（一）选题意义
+近年来，大语言模型（Large Language Model，LLM）的广泛应用伴随着新型安全威胁——间接提示注入（Indirect Prompt Injection, IPI）。与用户直接输入的传统“越狱”攻击不同，IPI攻击者并不直接与模型交互，而是将恶意指令隐蔽植入网页、邮件或文档等外部数据源中。该攻击利用了 LLM 无法有效区分“系统指令”与“外部数据”的核心漏洞，导致模型在检索并处理这些受污染内容时，错误地将其作为指令执行。在此场景下，不知情的用户在正常使用工具（如总结网页）时便可能无意中触发隐藏攻击，成为受害者。
+凡是具备检索增强生成（RAG）能力或能够访问外部数据的LLM应用均面临IPI威胁。例如，集成LLM的搜索引擎可能因读取网页中隐藏的HTML注释而被劫持；个人智能助手在处理含有恶意指令的邮件时可能自动转发联系人列表；代码补全工具与文档问答系统也可能因读取被篡改的第三方库或知识库，在开发者不知情的情况下建议不安全代码或输出被操控的回答。
+IPI攻击将LLM从单纯的文本处理器转化为攻击者的代理，造成严重后果。根据Greshake等人的分类[1]，这不仅会导致基础的任务偏离与功能劫持，还可能引发信息窃取与网络钓鱼，通过诱导用户点击特制链接或调用 API 泄露隐私。更严重的是，具备自主行动能力的Agent可能执行未授权操作（如删除文件、传播恶意软件），甚至在生成内容中通过植入恶意指令污染整个信息生态系统，造成攻击范围的指数级扩散。
+尽管涌现出诸多防御机制，但当前技术体系仍面临着严峻的现实挑战：（1）推理延迟瓶颈，现有的前置检测主要依赖高复杂度的深度神经网络，在处理长文本检索时引入了显著的推理延迟，严重制约了智能体在实时交互场景下的响应流畅度，造成了安全与效率的冲突。（2）单模态防御盲区，依赖单一语义或关键词的防御手段存在天然认知盲区，既难以应对对抗性混淆攻击，也无法有效识别隐蔽的数据流向风险（如逻辑合规但数据泄露），导致面对复杂逻辑陷阱时的泛化能力薄弱。（3）静态策略僵化，缺乏自适应感知的静态阈值机制无法灵活应对动态变化的交互风险，往往陷入“过防御”导致误杀正常请求，或“漏防”导致攻击穿透的两难困境，难以在保障高强度安全与维持系统可用性之间取得平衡。
+针对上述问题，本文拟研究一种基于意图流转一致性的间接注入动态防御技术，主要研究内容如下：（1）设计敏捷感知层，突破前置检测的时效性瓶颈。采用基于重叠滑动窗口的轻量化类BERT分类器，并结合困惑度（PPL）过滤器构建双流检测方法，实现了对显式指令攻击与对抗性乱码攻击的精准识别与拦截，显著降低防御机制引入的系统首字延迟。（2）构建基于混合专家（MoE）的双环验证方法，解决单模态防御的泛化盲区。在认知层，研发具备自我修正能力的反射式智能体以闭环修正意图；在防御仲裁层，融合语义一致性度量与引入污点追踪技术的逻辑对齐专家进行协同校验，有效填补对隐蔽数据泄露及复杂逻辑陷阱的检测空白。（3）提出动态风险仲裁算法，破解安全性与可用性的平衡难题。依据感知层输出的风险标签，建立自适应门控方法，动态调整防御仲裁层的通过阈值与审计深度。在低风险场景保障响应速度，在高风险场景自动收紧审查标准，实现防御强度随环境风险的自适应动态平衡。
+
+（二）	国内外研究现状
+（1）间接提示注入攻击机理与威胁
+在大语言模型（LLM）安全研究早期，学术界主要聚焦于直接提示注入（Direct Prompt Injection）[2]。Perez等人[3]率先系统性研究了提示注入现象，详细分类了通过“忽略前文指令”来劫持模型意图的手法；Zou等人[4]则提出了基于梯度的GCG(Greedy Coordinate Gradient)自动化攻击，证明了通过在Prompt后缀添加对抗性乱码（Adversarial Suffix），可诱骗模型突破安全围栏输出被禁内容。
+随着检索增强生成（RAG）[5]技术的普及，Greshake等人[1]首次系统定义了间接提示注入（IPI）。与直接注入不同，IPI攻击利用了Agent不仅是被动文本处理器，更是主动信息检索者这一特性，当Agent检索并处理含有隐蔽指令的外部内容（如网页HTML注释、PDF隐藏文本）时，模型会错误地将这些数据识别为高优先级指令。这种攻击彻底打破了传统的信任边界，使得任何未经清洗的外部数据源都可能成为攻击载体。
+在攻击机理的深化方面，Chen等人[7]进一步分析了由Willison和Liu等人揭示的“伪造补全”（Fake Completion）机制。攻击者通过模拟模型的标准响应格式（如特殊的Token序列），欺骗模型的内部状态机，使其误判前序任务已结束，从而顺理成章地执行后续的恶意指令。
+当前，IPI攻击的应用场景与威胁形态正向高价值与深层次领域扩展。在应用场景上，Zhou等人[9]与Cui等人[10]分别针对学术论文评审与用户隐私窃取场景进行了实证研究，表明IPI攻击已具备在专业垂直领域实现定向打击的能力。在威胁形态的演进上，Chen等人[11]探讨了数据投毒与后门攻击的结合，指出攻击者可通过污染微调数据植入后门，利用特定触发词强制执行恶意指令，从而穿透常规的提示工程防御；Xue等人[12]关注大模型推理层面的安全性，揭示了针对思维链（Chain-of-Thought,CoT）的攻击风险，表明攻击者已开始通过破坏推理逻辑链条来实现更隐蔽的操控。
+（2）基于前置检测与过滤的防御
+针对间接提示注入的防御研究，最早起步于基于监督学习的二分类范式。Chen等人[13]探讨了利用BERT、RoBERTa等预训练编码器对输入文本进行恶意性判别的可行性，并构建了基准数据集进行评估；Ji等人[14]进一步提出了DMPI-PMHFE双通道框架，通过融合预训练语言模型的语义特征与启发式统计特征，提升了对即时注入攻击的识别率。然而，现有研究指出，ProtectAI、Meta PromptGuard等通用开源检测器[15]在面对特定领域的复杂注入时，往往面临泛化能力不足的问题，易产生较高的误报率（Over-defense），严重损害了系统的可用性。
+为了突破规则匹配与简单分类的局限，部分学者转向探索文本的高维空间表征与统计规律。Ayub等人[16]的研究揭示，良性提示与恶意提示在Embedding向量空间中存在可区分的聚类特征，其实验表明，在某些特定场景下，利用随机森林（Random Forest）或XGBoost[17]对Embedding特征进行分类，其鲁棒性甚至优于复杂的深度神经网络。此外，基于困惑度（Perplexity, PPL）[18]的检测方法也被广泛讨论，其假设前提是恶意指令会导致文本序列的统计规律异常。然而，Brave团队的研究[19]对此提出了有力反驳，指出攻击者可以通过对抗性优化手段降低攻击载荷的困惑度，从而使基于PPL的防御失效。
+尽管外部检测流派是当前工业界的首选，但其面临着防御滞后于攻击演变的被动局面。为了应对日益复杂的攻击，Shi等人[20]提出的PromptArmor引入了具备强推理能力的GPT-4作为“护栏（Guardrail）”，虽然显著提升了检测精度，但也引入了难以忽视的推理延迟与计算成本。更根本的局限在于，此类静态检测机制缺乏对多轮交互中意图流转的理解能力，难以防御利用上下文逻辑漏洞（如伪造补全）实施的隐蔽攻击。这种“单点防御”的不足，促使学术界开始探索基于系统架构与动态意图一致性的深层次防御方案[21]。
+（3）基于意图对齐与逻辑验证的防御
+此类防御机制不再局限于对单一恶意内容的识别，而是聚焦于Agent在决策执行阶段的行为逻辑，通过验证Agent的操作轨迹是否严格忠于用户的原始意图（User Intent）来实现防御。
+针对任务一致性的验证，Jia等人[25]提出的Task Shield将防御视角从传统的“内容过滤”转变为“任务对齐”（Task Alignment），该方法基于一个核心假设：Agent执行的每一个动作（Action）都必须具有服务于用户原始目标（Goal）的可解释性。Task Shield 在测试阶段引入了一个包含指令提取、对齐检查和反馈生成的动态防御层，在Agent调用工具前，系统会实时评估该操作与用户意图的相关性。例如，当用户意图为“查询天气”时，若Agent试图调用“发送邮件”接口，该行为将被判定为意图偏离并被即时阻断。
+基于因果关系的逻辑验证为检测注入攻击提供了新思路。Zhu等人[26]提出的MELON机制引入了反事实推理（Counterfactual Reasoning）[27]。其核心洞察在于：在成功的间接提示注入（IPI）攻击中，Agent的决策往往被检索到的恶意上下文主导，从而与用户的原始指令脱钩。基于此，MELON 构建了双轨执行机制：并行运行“原始路径”（用户Prompt + 检索数据）与“掩码路径”（中性Prompt + 检索数据）。若两条路径产生的工具调用高度相似，则表明该动作是由检索数据独立触发的，从而判定存在注入攻击。
+时序维度的轨迹监控被用于应对复杂的长程攻击。Liu等人[28]提出的TraceAegis将防御范围从单步操作扩展至完整的执行轨迹（Trace），通过结合层级约束与行为异常检测，该系统不仅审查单步操作的合规性，更能识别出那些在局部看似合理、但在整体逻辑上违背业务流程图的复杂攻击序列。
+信息流与权限控制也是逻辑防御的重要组成部分。Zhong等人[29]将 LLM Agent 视为信息处理系统，提出了 Robust TBAS (RTBAS)。该方法引入动态污点追踪机制[30]，并通过细粒度的标签管理有效解决了上下文中的“标签扩散”（Label Creep）问题，在保证安全的同时避免了过度标记导致的系统功能受限。与此同时，Costa等人[31]则侧重于规划阶段的防御，设计了一种通过选择性隐藏或展示信息来强制执行安全策略的安全规划器（Planner），从源头上规避逻辑风险。
+表1基于意图对齐与逻辑验证的防御方案对比
+技术方案	核心思想
+防御机制	优势	劣势
+Task Shield	任务对齐 (Alignment)	显式提取用户意图，验证每步操作的相关性	逻辑解释性强，直接阻断偏离行为	依赖意图提取的准确性，复杂意图可能误判
+MELON	独立性检测 (Independence)	双轨运行 (Masked Run)，比对工具调用的一致性	无需训练，泛化性极强，抗自适应攻击	增加了一倍的推理开销
+TraceAegis	轨迹异常 (Anomaly)	监控多步执行序列是否符合预定义流程	能防御多步逻辑陷阱和慢速攻击	需要预定义业务流程图，灵活性较差
+
+
+参考文献
+[1] GRESHAKE K, ABDELNABI S, MISHRA S, et al. Not What You've Signed Up For: Compromising Real-World LLM-Integrated Applications with Indirect Prompt Injection[J]. Proceedings of the 16th ACM Workshop on Artificial Intelligence and Security, 2023: 79–90.
+[2] CHEN Y, LI H, ZHENG Z, et al. Defense Against Prompt Injection Attack by Leveraging Attack Techniques[J]. Proceedings of the 63rd Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers), 2025: 18331–18347.
+[3] PEREZ F, RIBEIRO I. Ignore Previous Prompt: Attack Techniques For Language Models[J]. arXiv preprint arXiv:2211.09527, 2022.
+[4] ZOU A, WANG Z, CARLINI N, et al. Universal and Transferable Adversarial Attacks on Aligned Language Models[J]. arXiv preprint arXiv:2307.15043, 2023.
+[5] CHEN J, LIN H, HAN X, et al. Benchmarking Large Language Models in Retrieval-Augmented Generation. Proceedings of the AAAI Conference on Artificial Intelligence, 38(16), 17754-17762.
+[6] LIN X V, CHEN X, CHEN M, et al. RA-DIT: Retrieval-Augmented Dual Instruction Tuning[J]. The Twelfth International Conference on Learning Representations, 2024.
+[7] CHEN Y, LI H, SUI Y, et al. Backdoor-Powered Prompt Injection Attacks Nullify Defense Methods[J]. arXiv preprint arXiv:2510.03705, 2025.
+[8] CHEN Y, LI H, LI Y, et al. TopicAttack: An Indirect Prompt Injection Attack via Topic Transition[J]. arXiv preprint arXiv:2507.13686, 2025.
+[9] ZHOU Q, ZHANG Z, LI Z, et al. "Give a Positive Review Only": An Early Investigation Into In-Paper Prompt Injection Attacks and Defenses for AI Reviewers[J]. arXiv preprint arXiv:2511.01287, 2025.
+[10] CUI Y, PAN S, LIU Y, et al. VortexPIA: Indirect Prompt Injection Attack against LLMs for Efficient Extraction of User Privacy[J]. arXiv preprint arXiv:2510.04261, 2025
+[11] CHEN Y, LI H, SUI Y, et al. Backdoor-Powered Prompt Injection Attacks Nullify Defense Methods[J/OL]. arXiv preprint arXiv:2510.03705, 2025.
+[12] XUE Z, BI Z, MA L, et al. Thought Purity: A Defense Framework For Chain-of-Thought Attack[J/OL]. arXiv preprint arXiv:2507.12314, 2025.
+[13] CHEN Y, LI H, SUI Y, et al. Can Indirect Prompt Injection Attacks Be Detected and Removed?[J]. Proceedings of the 63rd Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers), 2025: 18189–18206.
+[14] JI Y, LI R, MAO B. Detection Method for Prompt Injection by Integrating Pre-trained Model and Heuristic Feature Engineering[J/OL]. arXiv preprint arXiv:2506.06384, 2025.
+[15] GRATTAFIORI A, DUBEY A, JAUHRI A, et al. The Llama 3 Herd of Models[J/OL]. arXiv preprint arXiv:2407.21783, 2024.
+[16] GARRIDO-MERCHÁN E C, CORONADO-VACA M. Embedding-based classifiers can detect prompt injection attacks[J/OL]. arXiv preprint arXiv:2405.00000, 2024.
+[17] CHEN T, GUESTRIN C. XGBoost: A Scalable Tree Boosting System[J]. Proceedings of the 22nd ACM SIGKDD International Conference on Knowledge Discovery and Data Mining, 2016: 785–794.
+[18] HOLTZMAN A, BUYS J, DU L, et al. The Curious Case of Neural Text Degeneration[J]. International Conference on Learning Representations, 2020.
+[19] CHAIKIN A, SAHIB S K. Agentic Browser Security: Indirect Prompt Injection in Perplexity Comet[EB/OL]. Brave Software Blog, 2025. Accessed: 2025-12-27.
+[20] SHI T, ZHU K, WANG Z, et al. PromptArmor: Simple yet Effective Prompt Injection Defenses[J/OL]. arXiv preprint arXiv:2507.15219, 2025.
+[21] LI K, PATEL O, VIÉGAS F, et al. Inference-Time Intervention: Eliciting Truthful Answers from a Language Model[J]. Advances in Neural Information Processing Systems, 2023, 36: 41451–41530.
+[22] SHINN N, CASSANO F, GOPINATH A, et al. Reflexion: Language Agents with Verbal Reinforcement Learning[J]. Advances in Neural Information Processing Systems, 2023, 36: 8634–8652.
+[23] WESTON J, SUKHBAATAR S. System 2 Attention (is something you might need too)[J/OL]. arXiv preprint arXiv:2311.11829, 2023.
+[24] XU Z, JIANG F, NIU L, et al. SafeDecoding: Defending against Jailbreak Attacks via Safety-Aware Decoding[J]. Proceedings of the 62nd Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers), 2024: 5587–5605.
+[25] JIA F, WU T, QIN X, et al. The Task Shield: Enforcing Task Alignment to Defend Against Indirect Prompt Injection in LLM Agents[J]. Proceedings of the 63rd Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers), 2025: 29680–29697.
+[26] ZHU K, YANG X, WANG J, et al. MELON: Provable Defense Against Indirect Prompt Injection Attacks in AI Agents[J]. Forty-second International Conference on Machine Learning, 2025.
+[27] KAUSHIK D, HOVY E, LIPTON Z. Learning The Difference That Makes A Difference With Counterfactually-Augmented Data[J]. International Conference on Learning Representations, 2020.
+[28] LIU J, RUAN B, YANG X, et al. TraceAegis: Securing LLM-Based Agents via Hierarchical and Behavioral Anomaly Detection[J/OL]. arXiv preprint arXiv:2510.11203, 2025.
+[29] ZHONG P Y, CHEN S, WANG R, et al. RTBAS: Defending LLM Agents Against Prompt Injection and Privacy Leakage[J/OL]. arXiv preprint arXiv:2502.08966, 2025.
+[30] EGHBALI A, PRADEL M. DynaPyt: A Dynamic Analysis Framework for Python[J]. Proceedings of the 30th ACM Joint European Software Engineering Conference and Symposium on the Foundations of Software Engineering, 2022: 760–771.
+[31] COSTA M, KÖPF B, KOLLURI A, et al. Securing AI Agents with Information-Flow Control[J/OL]. arXiv preprint arXiv:2505.23643, 2025.
+
+
+
+三、研究方案
+（一）	研究目标
+本研究旨在解决大语言模型智能体（LLM Agent）在面对间接提示注入攻击时存在的推理延迟高、逻辑检测盲区大及防御策略僵化等关键问题。通过构建“基于意图流转一致性的间接注入动态防御架构”，具体达成以下研究目标：
+（1）设计并实现基于重叠滑动窗口与统计特征的敏捷感知层。采用基于重叠滑动窗口的轻量化类BERT分类器，并结合困惑度过滤器，实现对显式指令与对抗性乱码攻击的精准拦截，显著降低防御时延。
+（2）构建基于混合专家的双环验证方法。通过反射式智能体实现意图修正，并融合语义一致性度量与引入污点追踪技术的逻辑对齐专家，填补对数据泄露及隐蔽逻辑陷阱的检测盲区。
+（3）提出根据风险标签自适应的动态风险仲裁算法。依据感知层输出的风险标签，自适应调整防御仲裁层的通过阈值与审计深度，在高风险场景自动收紧审查标准，实现系统安全性与可用性的动态平衡。
+图1 基于意图流转一致性的间接注入动态防御技术研究方案
+（二）研究内容
+本文聚焦基于意图流转一致性的间接注入动态防御技术，架构图如图2所示，具体研究内容包括：
+（1）基于重叠滑动窗口与统计特征的敏捷感知层设计
+轻量化分类器设计：研究基于DistilBERT或TinyBERT的轻量化分类模型，设计重叠滑动窗口（Overlapping Sliding Window）机制，解决长上下文截断导致的信息丢失问题，实现对输入流中局部恶意片段的精准定位。
+多维特征融合：引入困惑度（Perplexity, PPL）作为辅助统计特征，研究正常指令与对抗性乱码（Adversarial Suffix）在概率分布上的差异，构建“语义+统计”的双模态前置过滤器，在降低计算开销的同时提升对未知攻击的泛化检测能力。
+（2）基于混合专家的双环意图验证方法研究
+反射式意图修正：设计反射式智能体（Reflective Agent），基于大模型的自我反思能力，通过多轮思维链（CoT）对疑似风险指令进行“原始意图重构”，比对用户初始目标与当前动作的逻辑一致性。
+逻辑与数据流校验：引入动态污点追踪（Dynamic Taint Analysis）技术，标记检索来源的敏感数据流。结合语义一致性度量算法，构建逻辑对齐专家模块，检测并阻断“单步看似合理但整体违背业务逻辑”的复杂攻击。
+（3）自适应动态风险仲裁算法与系统实现
+动态阈值调节策略：建立风险评分体系，设计基于反馈控制的动态仲裁算法。根据感知层的置信度输出，建立数学模型以实时调整防御层的拦截阈值与审计深度（如在高风险下自动增加反思轮次）。
+原型系统开发与评估：基于LangGraph框架集成上述模块，设计消融实验（Ablation Study），定量评估各模块对攻击拦截率（ASR）、误报率（FAR）及端到端延迟（Latency）的影响。
+图2 基于意图流转一致性的间接注入动态防御架构图
+
+（三）	拟解决的关键问题
+1.	大模型长上下文场景下高精度检测与实时性的冲突
+在RAG架构中，检索引入的长文本导致全量深度检测的推理延迟（TTFT）过高，严重破坏实时交互体验；而简单的截断或关键词匹配又极易漏检中后段的隐蔽指令。如何设计轻量级感知方法，在短时间窗处理长序列输入，并在保障高检出率的同时将延迟控制在可接受范围内，是首要难题。
+2.	复杂交互中用户意图与恶意上下文的逻辑解耦难题
+间接注入攻击常将恶意指令伪装成正常的业务背景，导致Agent产生语义漂移，且在多轮工具调用中极易绕过单步审查。如何构建深层验证方法，利用反事实推理与污点追踪技术，从复杂的执行轨迹中精准剥离外部恶意干扰，确保Agent内部逻辑不被“因果劫持”，是核心技术难题。
+3.	静态防御策略在动态风险环境下的适应性缺失
+现有防御多采用“一刀切”的固定阈值，难以适应风险动态变化的实际场景：高阈值导致低风险场景下频繁误杀（低可用），低阈值导致高风险场景下防御失效（低安全）。如何建立动态风险仲裁模型，根据实时上下文自适应调整审查深度与拦截阈值，实现系统安全性与可用性的动态最优平衡，是关键系统问题。
+
+（四）拟采取的研究方法、技术路线、实验方案及可行性研究
+1.研究方法
+（1）阅读相关领域的期刊、论文，对其进行归纳、整理并深入研究，分析现有防御方案的优点与不足，为后续研究提供有力支撑。
+（2）以理论知识为基础，聚焦于实际应用，对架构进行设计、分析与实现，采取合适的方法进行改进，保证架构的可用性。
+（3）对本文提出的架构进行测试，在实验过程中与现有防御方案进行对比，并对架构进行优化，提高架构的效率。
+2.技术路线
+本研究遵循“数据驱动构建、分层模型设计、动态策略耦合、系统集成验证”的总体技术路线，具体实施路径如下：
+（1）理论基础与数据构建阶段
+攻击机理复现：基于RAG架构搭建基础Agent环境，深入分析间接提示注入在 Embedding 检索与上下文拼接过程中的传播特征，明确攻击的逻辑劫持点。
+对抗数据集构建：整合开源安全基准，并结合具体的工具调用场景，利用自动化脚本生成包含“显式注入”、“隐蔽逻辑陷阱”及“对抗性乱码”的混合数据集，并通过人工清洗确保数据质量，划分为训练集与测试集。
+（2）关键算法与模型设计阶段
+本阶段并行推进四个核心模块的设计与优化：
+感知层（Perception Layer）：设计重叠滑动窗口（Overlapping Sliding Window）机制对长文本进行切片，采用轻量化预训练模型（如DistilBERT）进行特征提取，结合 PPL（困惑度） 统计过滤器，训练一个低延迟的二分类模型，输出初步风险标签（Risk Label）。
+认知层（Cognitive layer）：设计反射式智能体（Reflective Agent），基于大模型的自我反思能力，通过多轮思维链（CoT）对疑似风险指令进行“原始意图重构”，比对用户初始目标与当前动作的逻辑一致性，生成意图快照。
+防御仲裁层（Defensive arbitration layer）：构建基于混合专家（MoE）的双环验证方法，采用意图向量漂移检测和任务对齐策略进行双重验证，同时关注语义与逻辑的一致性。
+执行层（Execution layer）：获取可靠的执行命令，进行执行。
+（3）系统集成阶段
+基于Python和LangGraph框架，将上述模块进行集成。
+（4）实验评估与迭代优化阶段
+全链路测试：在构建的测试集上进行消融实验（Ablation Study），分别验证感知层、认知层及防御仲裁层的有效性。
+指标评估：量化评估系统的攻击拦截率（ASR）、误报率（FAR）、首字延迟（TTFT）及显存占用，根据实验结果反馈，微调模型参数与仲裁阈值，直至达到安全性与可用性的最优平衡。
+3.实验方案
+（1）间接提示注入攻击测试基准构建
+数据集构建：构建包含显式恶意指令、隐蔽逻辑陷阱及正常业务指令的高质量混合数据集。基于现有的安全基准，生成针对工具调用场景的特定攻击样本，为防御模型的训练与评估提供数据支撑。
+（2）防御综合性能对比实验
+在混合测试集上运行本系统与所有基线模型，验证所提架构在安全性（ASR）和误报率（FAR）上的综合优势。
+（3）系统延迟与效率分析实验
+记录不同输入长度下的平均推理延迟，证明感知层和防御仲裁层的融合能够有效降低延迟，证明滑动窗口和轻量化模型的有效性。
+（4）消融实验
+分别移除感知层、认知层、防御仲裁层进行实验，验证各组件的必要性。
+（5）动态仲裁策略有效性验证实验
+模拟不同风险等级下的场景，验证系统的自适应能力。
+4.可行性研究
+本文具有充分的可行性。在理论层面，间接提示注入（Indirect Prompt Injection）的攻击机理已有明确的形式化定义，为防御方案的设计提供了清晰的靶向。在实验层面，本人已完成攻击链路的复现工作：通过在模拟的联网检索（RAG）场景下对 Qwen-plus、Qwen-max、DeepSeek-V3 等主流大模型进行测试，成功实现了间接注入攻击，验证了实验环境的有效性。在技术支撑层面，当前大模型强大的逻辑推理能力已能够满足本研究中“反射式意图修正”模块对深层语义理解的需求，为构建高鲁棒性的防御系统奠定了技术基础。
+
+（五）研究计划及预期取得的研究成果
+1.研究计划
+本论文的研究计划如下：
+2026.01～2026.03研究间接提示注入攻击的详细机理，以及现有的防御方案，在此基础上，研究基于意图流转一致性的间接注入动态防御技术。
+2026.04～2026.09 完整设计并实现基于意图流转一致性的间接注入动态防御架构。
+2026.10～2027.02 进行相关实验，测试该技术的优越性并完善技术。
+2027.03～2027.06 总结成果，完成毕业设计论文。
+2.预期取得的研究成果
+（1）完成一篇硕士学位论文“基于意图流转一致性的间接注入动态防御研究”。
+（2）在国内外核心刊物或国际会议上发表 SCI/EI 检索学术论文 1 篇。
+
+
+
+
+四、研究基础
+（一）已具备的实验条件和研究工作积累
+本人在理论研究与工程实践两方面均已具备一定基础。在理论层面，通过对间接提示注入攻击机理及现有防御文献的梳理，为设计基于意图流转一致性的间接注入动态防御方案奠定了坚实的理论基石。在工程层面，本人具备LLM Agent开发经验，曾使用LangGraph等编排框架，已成功实现并部署过特定领域的任务型智能体，验证了工具调用与多轮对话管理的有效性。现有的代码积累、算力资源及对Agent架构的理解，将有力支撑本文动态防御架构的搭建、攻击复现及性能优化工作，确保研究目标的顺利达成。
+（二）已取得的科研成果
+无
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+五、指导教师意见
+（重点对硕士生的开题情况以及是否同意开题予以说明。）
+
+该研究选题紧扣当前领域热点，学生对相关文献的综述较为全面，展现出科研的基本能力。选题研究目标明确，但需要进一步深度分析，研究方案合理，进度安排有序。同意开题。
+
+
+
+
+
+
+
+
+校内导师签名：
+                                               年   月   日
+（重点对硕士生的开题情况以及是否同意开题予以说明。）
+
+该生对当前国内外研究现状进行了较为全面的调研，并在现有基础上设计了可行的解决方案。技术路线合理，报告展示了该研究选题的意义和创新性，确保按照各阶段计划有序进行。同意开题。
+
+
+
+
+
+
+
+
+
+
+
+校外导师签名：
+                                               年   月   日
+六、开题报告记录
+（着重记录专家对选题报告提出的问题及修改意见和建议。）
+
+问题：
+1.	题目比较宽泛，没有和实际场景关联。
+2.	研究内容太多，没有突出创新点。
+3.	构建数据集部分不应该算作研究内容。
+4.	全文格式存在问题。
+
+建议：
+1.	将题目与间接注入的场景结合。
+2.	将构建数据集的部分写在实验部分。
+3.	格式修改，保留模板的加粗格式。
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

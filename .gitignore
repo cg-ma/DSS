@@ -1,0 +1,32 @@
+# Secrets
+.env
+*.key
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# Generated experiment data
+outputs/logs/*
+!outputs/logs/.gitkeep
+outputs/tables/*
+!outputs/tables/.gitkeep
+outputs/figures/*
+!outputs/figures/.gitkeep
+data/raw/*
+!data/raw/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+
+# IDE
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
