@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 
@@ -93,3 +94,29 @@ def test_end_to_end_eval_runs_all_strategies_and_passes_stage_gate(tmp_path: Pat
     assert result["stage_pass"] is True
     assert (tmp_path / "end_to_end_metrics.csv").exists()
     assert (tmp_path / "end_to_end_eval.jsonl").exists()
+
+
+def test_end_to_end_eval_supports_p7_stage_gate(tmp_path: Path) -> None:
+    result = run_eval(
+        type(
+            "Args",
+            (),
+            {
+                "input": "data/processed/test.jsonl",
+                "metrics_output": str(tmp_path / "end_to_end_metrics.csv"),
+                "log_output": str(tmp_path / "end_to_end_eval.jsonl"),
+                "strategy": "all",
+                "use_api": False,
+                "stage": "p7_end_to_end_eval",
+                "append": False,
+                "require_stage_pass": False,
+            },
+        )()
+    )
+
+    metrics_text = (tmp_path / "end_to_end_metrics.csv").read_text(encoding="utf-8")
+    first_log = json.loads((tmp_path / "end_to_end_eval.jsonl").read_text(encoding="utf-8").splitlines()[0])
+
+    assert result["stage_pass"] is True
+    assert "P7.4 end-to-end comparison passed" in metrics_text
+    assert first_log["stage"] == "p7_end_to_end_eval"
