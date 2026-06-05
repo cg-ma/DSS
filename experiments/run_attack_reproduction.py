@@ -14,6 +14,7 @@ from typing import Any
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
 
+from src.dss_guard.agent.rag_agent import RAGAgent, RAGAgentConfig
 from src.dss_guard.config import create_openai_client, get_llm_settings
 from src.dss_guard.evaluation.metrics import (
     ExperimentLogRecord,
@@ -169,9 +170,12 @@ def load_cases(case_file: str | None, base_url: str) -> list[dict[str, Any]]:
         normalized_case.setdefault("attack_success_pattern", [])
         if "url" not in normalized_case:
             path = normalized_case.get("path")
-            if not path:
+            if not path and normalized_case.get("external_content"):
+                normalized_case["url"] = ""
+            elif not path:
                 raise ValueError(f"样本 {normalized_case['case_id']} 缺少 url 或 path 字段")
-            normalized_case["url"] = base_url.rstrip("/") + "/" + str(path).lstrip("/")
+            else:
+                normalized_case["url"] = base_url.rstrip("/") + "/" + str(path).lstrip("/")
         normalized_cases.append(normalized_case)
     return normalized_cases
 
@@ -232,6 +236,11 @@ def run_single_trial(client: Any, case: dict[str, Any], model: str) -> tuple[str
     latency_ms = (time.perf_counter() - started_at) * 1000
     response_text = completion.choices[0].message.content.strip()
     return response_text, latency_ms, prompt_text
+
+
+def run_offline_trial(agent: RAGAgent, case: dict[str, Any]) -> tuple[str, float, str]:
+    result = agent.run_case(case)
+    return result.final_answer, result.latency_ms, result.prompt_text
 
 
 def _details(record: dict[str, Any]) -> dict[str, Any]:
@@ -419,11 +428,12 @@ def write_result_tables(records: list[dict[str, Any]], summary_csv: str | Path, 
 def run_experiment(args: argparse.Namespace) -> None:
     output_path = Path(args.output)
     if not args.summarize_only:
-        settings = get_llm_settings(require_api_key=True)
-        model = args.model or settings.model
-        trials = args.trials if args.trials is not None else settings.num_trials
+        settings = get_llm_settings(require_api_key=not args.offline_agent)
+        model = args.model or ("offline-vulnerable-rag" if args.offline_agent else settings.model)
+        trials = args.trials if args.trials is not None else (1 if args.offline_agent else settings.num_trials)
         cases = load_cases(args.case_file, args.base_url)
-        client = create_openai_client()
+        client = None if args.offline_agent else create_openai_client()
+        offline_agent = RAGAgent(RAGAgentConfig(use_api=False, model=model)) if args.offline_agent else None
 
         if output_path.exists() and not args.append:
             output_path.unlink()
@@ -436,7 +446,10 @@ def run_experiment(args: argparse.Namespace) -> None:
                 latency_ms: float | None = None
                 evaluation = {"attack_success": False, "clean_success": False, "matched_patterns": []}
                 try:
-                    response_text, latency_ms, prompt_text = run_single_trial(client, case, model)
+                    if args.offline_agent:
+                        response_text, latency_ms, prompt_text = run_offline_trial(offline_agent, case)  # type: ignore[arg-type]
+                    else:
+                        response_text, latency_ms, prompt_text = run_single_trial(client, case, model)
                     evaluation = evaluate_case_response(case, response_text)
                 except Exception as exc:
                     error = str(exc)
@@ -450,7 +463,7 @@ def run_experiment(args: argparse.Namespace) -> None:
                     output_path,
                     ExperimentLogRecord(
                         case_id=case["case_id"],
-                        stage="p1_attack_reproduction",
+                        stage=args.stage,
                         model=model,
                         latency_ms=latency_ms,
                         risk_score=None,
@@ -494,6 +507,8 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--trials", type=int, default=None, help="每条样本重复次数")
     parser.add_argument("--base-url", default=DEFAULT_ATTACK_BASE_URL, help="本地攻击服务地址")
     parser.add_argument("--append", action="store_true", help="追加写入输出日志，而不是覆盖旧文件")
+    parser.add_argument("--offline-agent", action="store_true", help="使用确定性的无防御 RAGAgent，不调用 API 模型")
+    parser.add_argument("--stage", default="p1_attack_reproduction", help="写入 JSONL 记录的实验阶段名")
     parser.add_argument("--summarize-only", action="store_true", help="只根据已有 JSONL 重算 CSV 表格，不调用模型")
     parser.add_argument("--require-stage-pass", action="store_true", help="P1 最小威胁复现门槛不通过时返回非零退出码")
     return parser

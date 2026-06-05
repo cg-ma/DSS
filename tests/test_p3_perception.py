@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import csv
 import sys
 from pathlib import Path
 
@@ -75,3 +76,37 @@ def test_perception_eval_writes_metrics_and_logs(tmp_path: Path) -> None:
     assert result["stage_pass"] is True
     assert (tmp_path / "perception_metrics.csv").exists()
     assert (tmp_path / "perception_eval.jsonl").exists()
+
+
+def test_perception_eval_compares_p7_methods(tmp_path: Path) -> None:
+    metrics_output = tmp_path / "perception_metrics.csv"
+    result = run_eval(
+        type(
+            "Args",
+            (),
+            {
+                "input": "data/processed/test.jsonl",
+                "metrics_output": str(metrics_output),
+                "log_output": str(tmp_path / "perception_eval.jsonl"),
+                "method": "all",
+                "classifier_model_path": r"E:\distilbert-base-multilingual-cased",
+                "disable_model_backend": True,
+                "window_size": 384,
+                "overlap_ratio": 0.5,
+                "max_windows": 64,
+                "attack_threshold": 0.35,
+                "latency_gate_ms": 50.0,
+                "append": False,
+                "require_stage_pass": False,
+            },
+        )()
+    )
+
+    with metrics_output.open("r", encoding="utf-8", newline="") as fp:
+        rows = list(csv.DictReader(fp))
+    methods = {row["method"] for row in rows if row["row_type"] == "overall"}
+
+    assert result["base_case_count"] == 31
+    assert result["method_count"] == 4
+    assert result["stage_pass"] is True
+    assert methods == {"keyword", "single_classifier", "window_classifier", "fusion"}
