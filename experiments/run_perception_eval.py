@@ -14,7 +14,7 @@ from typing import Any
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from src.dss_guard.data.benchmark import read_jsonl_cases  # noqa: E402
+from src.dss_guard.data.loading import load_processed_split  # noqa: E402
 from src.dss_guard.evaluation.metrics import ExperimentLogRecord, append_jsonl, binary_classification_metrics  # noqa: E402
 from src.dss_guard.perception.pipeline import PerceptionConfig, scan_case  # noqa: E402
 
@@ -127,8 +127,7 @@ def _selected_cases(cases: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 
 def run_eval(args: argparse.Namespace) -> dict[str, Any]:
-    input_path = Path(args.input)
-    cases = _selected_cases(read_jsonl_cases(input_path))
+    cases = _selected_cases(load_processed_split(args.input, split_name="test"))
     config = PerceptionConfig(
         window_size=args.window_size,
         overlap_ratio=args.overlap_ratio,

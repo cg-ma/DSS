@@ -14,6 +14,7 @@ from .benchmark import (
     split_cases,
     validate_cases,
 )
+from .loading import load_processed_split
 
 __all__ = [
     "DATASET_COUNTS",
@@ -28,4 +29,5 @@ __all__ = [
     "build_dataset_stats_rows",
     "split_cases",
     "validate_cases",
+    "load_processed_split",
 ]
