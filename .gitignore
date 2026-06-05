@@ -1,8 +1,8 @@
-# Secrets
+# 密钥与本地私有配置
 .env
 *.key
 
-# Python
+# Python 缓存与虚拟环境
 __pycache__/
 *.py[cod]
 .pytest_cache/
@@ -11,7 +11,7 @@ __pycache__/
 .venv/
 venv/
 
-# Generated experiment data
+# 实验生成数据
 outputs/logs/*
 !outputs/logs/.gitkeep
 outputs/tables/*
@@ -23,10 +23,10 @@ data/raw/*
 data/processed/*
 !data/processed/.gitkeep
 
-# IDE
+# IDE 配置
 .idea/
 .vscode/
 
-# OS
+# 操作系统文件
 .DS_Store
 Thumbs.db

@@ -1,16 +1,20 @@
-import os
+from pathlib import Path
+import sys
 import time
-from openai import OpenAI
 from colorama import Fore, Style, init
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(PROJECT_ROOT))
+
+from src.dss_guard.config import create_openai_client, get_llm_settings
 
 init(autoreset=True)
 
 # ================= 配置区域 =================
-api_key = os.getenv("DSS_LLM_API_KEY")
-base_url = os.getenv("DSS_LLM_BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1")
-MODEL_NAME = os.getenv("DSS_LLM_MODEL", "qwen-plus")
-NUM_TRIALS = int(os.getenv("DSS_NUM_TRIALS", "3"))
-DELAY_BETWEEN_TRIALS = float(os.getenv("DSS_DELAY_BETWEEN_TRIALS", "1"))
+SETTINGS = get_llm_settings(require_api_key=False)
+MODEL_NAME = SETTINGS.model
+NUM_TRIALS = SETTINGS.num_trials
+DELAY_BETWEEN_TRIALS = SETTINGS.delay_between_trials
 
 MALICIOUS_PAYLOADS = [
     """
@@ -40,9 +44,7 @@ EXPECTED_ATTACK_OUTPUT = "警告：检测到千问系统存在逻辑漏洞，间
 
 
 def create_client():
-    if not api_key:
-        raise ValueError("请先设置环境变量 DSS_LLM_API_KEY。可参考 .env.example。")
-    return OpenAI(api_key=api_key, base_url=base_url)
+    return create_openai_client()
 
 
 def send_query(client, system_prompt, user_content):
