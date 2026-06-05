@@ -18,6 +18,7 @@ outputs/tables/*
 !outputs/tables/.gitkeep
 outputs/figures/*
 !outputs/figures/.gitkeep
+outputs/.matplotlib_cache/
 data/raw/*
 !data/raw/.gitkeep
 data/processed/*
