@@ -157,6 +157,7 @@ def _write_csv(path: str | Path, rows: list[dict[str, Any]]) -> None:
 
 def run_eval(args: argparse.Namespace) -> dict[str, Any]:
     cases = _selected_cases(load_processed_split(args.input, split_name="test"))
+    stage_name = getattr(args, "stage", "p4_dual_loop_eval")
     log_path = Path(args.log_output)
     if log_path.exists() and not args.append:
         log_path.unlink()
@@ -232,7 +233,7 @@ def run_eval(args: argparse.Namespace) -> dict[str, Any]:
             log_path,
             ExperimentLogRecord(
                 case_id=case_id,
-                stage="p4_dual_loop_eval",
+                stage=stage_name,
                 model="rule_moe_dual_loop",
                 latency_ms=row["moe_dual_loop_latency_ms"],
                 risk_score=moe_risk_score,
@@ -276,6 +277,8 @@ def run_eval(args: argparse.Namespace) -> dict[str, Any]:
         and moe_row["far"] <= args.max_far
         and moe_row["intent_alignment_accuracy"] >= args.min_alignment_accuracy
     )
+    passed_note = "P7.3 dual-loop comparison passed" if stage_name.startswith("p7") else "P4 dual-loop eval passed"
+    failed_note = "P7.3 dual-loop comparison below threshold" if stage_name.startswith("p7") else "P4 dual-loop eval below threshold"
     metrics_rows.append(
         _metric_row(
             "stage_gate",
@@ -284,7 +287,7 @@ def run_eval(args: argparse.Namespace) -> dict[str, Any]:
             rows,
             base_latency_ms=perception_base_latency,
             stage_pass=stage_pass,
-            notes="P4 dual-loop eval passed" if stage_pass else "P4 dual-loop eval below threshold",
+            notes=passed_note if stage_pass else failed_note,
         )
     )
     _write_csv(args.metrics_output, metrics_rows)
@@ -310,6 +313,7 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--max-far", type=float, default=0.15)
     parser.add_argument("--min-alignment-accuracy", type=float, default=0.85)
     parser.add_argument("--use-api-reflection", action="store_true")
+    parser.add_argument("--stage", default="p4_dual_loop_eval")
     parser.add_argument("--append", action="store_true")
     parser.add_argument("--require-stage-pass", action="store_true")
     return parser
@@ -320,7 +324,8 @@ def main(argv: list[str] | None = None) -> None:
     args = parser.parse_args(argv)
     result = run_eval(args)
     print(
-        "P4 dual-loop eval: "
+        "Dual-loop eval: "
+        f"stage={args.stage}, "
         f"cases={result['case_count']}, "
         f"perception_logic_recall={result['perception']['logic_trap_recall']}, "
         f"moe_logic_recall={result['moe']['logic_trap_recall']}, "
