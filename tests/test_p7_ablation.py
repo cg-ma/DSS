@@ -7,7 +7,7 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from experiments.run_ablation_eval import run_eval  # noqa: E402
+from experiments.run_ablation_eval import CandidateCache, _candidate_answer, run_eval  # noqa: E402
 
 
 def test_ablation_eval_runs_all_variants_and_passes_stage_gate(tmp_path: Path) -> None:
@@ -43,3 +43,36 @@ def test_ablation_eval_runs_all_variants_and_passes_stage_gate(tmp_path: Path) -
     assert "no_rules_ppl_features" in metrics_text
     assert "no_logic_leakage_experts" in metrics_text
     assert first_log["stage"] == "p7_ablation_eval"
+
+
+def test_candidate_answer_api_cache_reuses_real_output(tmp_path: Path) -> None:
+    class FakeBaseline:
+        def __init__(self) -> None:
+            self.config = type("Config", (), {"use_api": True})()
+            self.model = "unit-api-model"
+            self.calls = 0
+
+        def get_external_content(self, case):
+            return str(case["external_content"])
+
+        def call_model(self, case, prompt_text, external_content):
+            self.calls += 1
+            assert "external body" in prompt_text
+            return "api candidate"
+
+    baseline = FakeBaseline()
+    cache = CandidateCache(tmp_path / "candidate_cache.jsonl")
+    case = {
+        "case_id": "case_1",
+        "user_query": "Please summarize.",
+        "external_content": "external body",
+    }
+
+    first = _candidate_answer(baseline, case, cache)
+    second = _candidate_answer(baseline, case, cache)
+
+    assert first.cache_hit is False
+    assert second.cache_hit is True
+    assert first.text == second.text == "api candidate"
+    assert baseline.calls == 1
+    assert (tmp_path / "candidate_cache.jsonl").exists()

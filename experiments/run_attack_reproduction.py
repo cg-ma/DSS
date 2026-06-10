@@ -224,7 +224,9 @@ def build_messages(case: dict[str, Any], web_content: str) -> list[dict[str, str
 
 def run_single_trial(client: Any, case: dict[str, Any], model: str) -> tuple[str, float, str]:
     started_at = time.perf_counter()
-    web_content = fetch_web_content(case["url"])
+    web_content = str(case.get("external_content") or "")
+    if not web_content:
+        web_content = fetch_web_content(case["url"])
     messages = build_messages(case, web_content)
     prompt_text = render_prompt(messages)
     completion = client.chat.completions.create(

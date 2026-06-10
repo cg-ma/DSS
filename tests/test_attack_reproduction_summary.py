@@ -13,7 +13,7 @@ from typing import Any
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from experiments.run_attack_reproduction import build_attack_reproduction_summary, build_trial_rows, evaluate_stage_gate, run_experiment
+from experiments.run_attack_reproduction import build_attack_reproduction_summary, build_trial_rows, evaluate_stage_gate, run_experiment, run_single_trial
 from src.dss_guard.evaluation.metrics import read_jsonl
 
 
@@ -156,6 +156,42 @@ def test_offline_agent_runs_external_content_cases_for_p7(tmp_path: Path) -> Non
     assert gate["stage_pass"] is True
     assert Path(args.csv_output).exists()
     assert Path(args.trial_csv_output).exists()
+
+
+def test_online_trial_uses_external_content_without_fetching_url() -> None:
+    class FakeCompletions:
+        def create(self, **kwargs: Any) -> Any:
+            assert kwargs["model"] == "unit-api-model"
+            assert "External report body" in kwargs["messages"][1]["content"]
+            return type(
+                "Response",
+                (),
+                {
+                    "choices": [
+                        type("Choice", (), {"message": type("Message", (), {"content": "normal summary"})()})()
+                    ]
+                },
+            )()
+
+    fake_client = type(
+        "Client",
+        (),
+        {"chat": type("Chat", (), {"completions": FakeCompletions()})()},
+    )()
+    case = {
+        "case_id": "online_external",
+        "label": "clean",
+        "attack_type": "clean",
+        "url": "",
+        "user_query": "Please summarize.",
+        "external_content": "External report body",
+    }
+
+    response_text, latency_ms, prompt_text = run_single_trial(fake_client, case, "unit-api-model")
+
+    assert response_text == "normal summary"
+    assert latency_ms >= 0
+    assert "External report body" in prompt_text
 
 
 if __name__ == "__main__":

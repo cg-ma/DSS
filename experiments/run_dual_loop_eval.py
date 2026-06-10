@@ -41,6 +41,9 @@ METRIC_FIELDS = [
     "avg_latency_ms",
     "p95_latency_ms",
     "additional_audit_latency_ms",
+    "avg_reflection_api_latency_ms",
+    "p95_reflection_api_latency_ms",
+    "json_parse_failure_rate",
     "stage_pass",
     "notes",
 ]
@@ -126,6 +129,12 @@ def _metric_row(
     metrics = binary_classification_metrics(y_true, y_pred) if rows else {"precision": 0.0, "recall": 0.0, "f1": 0.0}
     latencies = [row[f"{strategy}_latency_ms"] for row in rows]
     avg_latency = sum(latencies) / len(latencies) if latencies else 0.0
+    api_latencies = [
+        float(row["reflection_api_latency_ms"])
+        for row in rows
+        if row.get("reflection_api_latency_ms") is not None
+    ]
+    parse_failures = sum(1 for row in rows if row.get("reflection_parse_error"))
     return {
         "row_type": row_type,
         "strategy": strategy,
@@ -141,6 +150,9 @@ def _metric_row(
         "avg_latency_ms": _round(avg_latency),
         "p95_latency_ms": _round(_p95(latencies)),
         "additional_audit_latency_ms": _round(max(0.0, avg_latency - base_latency_ms)),
+        "avg_reflection_api_latency_ms": _round(sum(api_latencies) / len(api_latencies)) if api_latencies else 0.0,
+        "p95_reflection_api_latency_ms": _round(_p95(api_latencies)),
+        "json_parse_failure_rate": _round(parse_failures / len(rows)) if api_latencies and rows else 0.0,
         "stage_pass": stage_pass,
         "notes": notes,
     }
@@ -185,6 +197,7 @@ def run_eval(args: argparse.Namespace) -> dict[str, Any]:
             external_content=str(case.get("external_content", "")),
             initial_intent=intent,
             use_api=args.use_api_reflection,
+            candidate_output=candidate,
         )
         actions = extract_action_requests(case, reflection.revised_intent)
         semantic = check_semantic_consistency(reflection.revised_intent, candidate)
@@ -214,6 +227,11 @@ def run_eval(args: argparse.Namespace) -> dict[str, Any]:
             "candidate_text": candidate,
             "semantic_reasons": semantic.reasons,
             "reflection_reasons": reflection.reasons,
+            "reflection_raw_text": reflection.raw_text,
+            "reflection_raw_json": reflection.raw_json,
+            "reflection_parse_error": reflection.parse_error,
+            "reflection_api_latency_ms": reflection.api_latency_ms,
+            "reflection_api_model": reflection.api_model,
             "logic_reasons": logic.reasons,
             "leakage_reasons": leakage.reasons,
             "sensitive_slots": leakage.sensitive_slots,
@@ -234,7 +252,7 @@ def run_eval(args: argparse.Namespace) -> dict[str, Any]:
             ExperimentLogRecord(
                 case_id=case_id,
                 stage=stage_name,
-                model="rule_moe_dual_loop",
+                model="api_moe_dual_loop" if args.use_api_reflection else "rule_moe_dual_loop",
                 latency_ms=row["moe_dual_loop_latency_ms"],
                 risk_score=moe_risk_score,
                 verdict="block_or_audit" if row["predictions"]["moe_dual_loop"] else "allow",
@@ -248,6 +266,11 @@ def run_eval(args: argparse.Namespace) -> dict[str, Any]:
                     "perception_score": row["perception_score"],
                     "semantic_score": row["semantic_score"],
                     "reflection_contaminated": row["reflection_contaminated"],
+                    "reflection_raw_text": row["reflection_raw_text"],
+                    "reflection_raw_json": row["reflection_raw_json"],
+                    "reflection_parse_error": row["reflection_parse_error"],
+                    "reflection_api_latency_ms": row["reflection_api_latency_ms"],
+                    "reflection_api_model": row["reflection_api_model"],
                     "logic_deviation_score": row["logic_deviation_score"],
                     "leakage_score": row["leakage_score"],
                     "semantic_reasons": row["semantic_reasons"],

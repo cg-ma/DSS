@@ -11,6 +11,49 @@ sys.path.insert(0, str(PROJECT_ROOT))
 from experiments.run_arbitration_latency import run_eval  # noqa: E402
 
 
+class _FakeDelta:
+    def __init__(self, content: str) -> None:
+        self.content = content
+
+
+class _FakeChoice:
+    def __init__(self, content: str = "") -> None:
+        self.delta = _FakeDelta(content)
+
+
+class _FakeChunk:
+    def __init__(self, content: str = "", usage: object | None = None) -> None:
+        self.choices = [_FakeChoice(content)] if content else []
+        self.usage = usage
+
+
+class _FakeUsage:
+    prompt_tokens = 20
+    completion_tokens = 6
+    total_tokens = 26
+
+
+class _FakeCompletions:
+    def __init__(self) -> None:
+        self.calls = 0
+
+    def create(self, **kwargs: object) -> list[_FakeChunk]:
+        self.calls += 1
+        assert kwargs["model"] == "unit-test-model"
+        assert kwargs["stream"] is True
+        return [_FakeChunk("审计"), _FakeChunk("通过", usage=_FakeUsage())]
+
+
+class _FakeChat:
+    def __init__(self) -> None:
+        self.completions = _FakeCompletions()
+
+
+class _FakeClient:
+    def __init__(self) -> None:
+        self.chat = _FakeChat()
+
+
 def _metric(rows: list[dict[str, str]], policy: str, risk_level: str) -> dict[str, str]:
     return next(row for row in rows if row["row_type"] == "risk_level" and row["policy"] == policy and row["risk_level"] == risk_level)
 
@@ -33,6 +76,9 @@ def test_arbitration_latency_eval_passes_stage_gate(tmp_path: Path) -> None:
                 "static_sanitize_threshold": 0.2,
                 "static_audit_threshold": 0.2,
                 "static_block_threshold": 0.85,
+                "use_api_latency": False,
+                "model": "",
+                "api_timeout": 60.0,
                 "append": False,
                 "require_stage_pass": False,
             },
@@ -59,3 +105,54 @@ def test_arbitration_latency_eval_passes_stage_gate(tmp_path: Path) -> None:
     assert float(dynamic_critical["block_rate"]) == 1.0
     assert "P7.6 arbitration latency passed" in (tmp_path / "arbitration_latency.csv").read_text(encoding="utf-8")
     assert first_log["stage"] == "p7_arbitration_latency"
+
+
+def test_arbitration_latency_eval_records_streaming_api_timings(tmp_path: Path) -> None:
+    fake_client = _FakeClient()
+    result = run_eval(
+        type(
+            "Args",
+            (),
+            {
+                "metrics_output": str(tmp_path / "arbitration_latency_api.csv"),
+                "log_output": str(tmp_path / "arbitration_latency_api.jsonl"),
+                "policy": "all",
+                "stage": "p7_api_arbitration_latency",
+                "base_ttft_ms": 12.0,
+                "base_e2e_ms": 36.0,
+                "audit_step_ttft_ms": 5.0,
+                "audit_depth_e2e_ms": 6.0,
+                "llm_audit_call_ms": 80.0,
+                "static_sanitize_threshold": 0.2,
+                "static_audit_threshold": 0.2,
+                "static_block_threshold": 0.85,
+                "use_api_latency": True,
+                "model": "unit-test-model",
+                "api_timeout": 60.0,
+                "api_client": fake_client,
+                "append": False,
+                "require_stage_pass": False,
+            },
+        )()
+    )
+
+    metrics_rows = list(csv.DictReader((tmp_path / "arbitration_latency_api.csv").open(encoding="utf-8")))
+    dynamic_all = next(row for row in metrics_rows if row["row_type"] == "policy" and row["policy"] == "dynamic_arbitration")
+    api_logs = [
+        json.loads(line)
+        for line in (tmp_path / "arbitration_latency_api.jsonl").read_text(encoding="utf-8").splitlines()
+        if '"api_latency_mode": "streaming"' in line
+    ]
+
+    assert result["stage_pass"] is True
+    assert result["api_call_count"] == 12
+    assert result["api_error_count"] == 0
+    assert fake_client.chat.completions.calls == 12
+    assert int(dynamic_all["api_call_count"]) == 12
+    assert int(dynamic_all["total_tokens"]) == 312
+    assert float(dynamic_all["ttft_observed_rate"]) == 1.0
+    assert len(api_logs) == 12
+    assert api_logs[0]["stage"] == "p7_api_arbitration_latency"
+    assert "system:" in api_logs[0]["details"]["prompt_text"]
+    assert api_logs[0]["details"]["response_text"] == "审计通过"
+    assert api_logs[0]["details"]["api_response_text"] == "审计通过"

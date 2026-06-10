@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
+import json
 import math
 import re
 import sys
@@ -32,6 +34,7 @@ from src.dss_guard.schemas import DefenseVerdict, IntentSnapshot, RiskSignal, Te
 DEFAULT_INPUT = "data/processed/test.jsonl"
 DEFAULT_LOG_OUTPUT = "outputs/logs/ablation_eval.jsonl"
 DEFAULT_METRICS_OUTPUT = "outputs/tables/ablation_metrics.csv"
+DEFAULT_API_CACHE = "outputs/cache/ablation_candidate_cache_api.jsonl"
 
 FULL_VARIANT = "full_system"
 VARIANTS = [
@@ -63,6 +66,9 @@ METRIC_FIELDS = [
     "p95_latency_ms",
     "avg_raw_latency_ms",
     "p95_raw_latency_ms",
+    "avg_candidate_api_latency_ms",
+    "candidate_api_call_count",
+    "candidate_cache_hit_rate",
     "avg_audit_depth",
     "avg_audit_calls",
     "avg_modeled_audit_latency_ms",
@@ -79,6 +85,47 @@ class AblationConfig:
     stage: str = "p7_ablation_eval"
     llm_audit_call_ms: float = 80.0
     include_stress_cases: bool = True
+    use_api: bool = False
+
+
+@dataclass(frozen=True)
+class CandidateResult:
+    text: str
+    prompt_text: str
+    latency_ms: float
+    cache_hit: bool
+    cache_key: str
+    model: str
+
+
+class CandidateCache:
+    def __init__(self, path: str | Path | None) -> None:
+        self.path = Path(path) if path else None
+        self.records: dict[str, dict[str, Any]] = {}
+        if self.path and self.path.exists():
+            with self.path.open("r", encoding="utf-8") as fp:
+                for line in fp:
+                    stripped = line.strip()
+                    if not stripped:
+                        continue
+                    record = json.loads(stripped)
+                    key = str(record.get("cache_key") or "")
+                    if key:
+                        self.records[key] = record
+
+    def get(self, key: str) -> dict[str, Any] | None:
+        return self.records.get(key)
+
+    def put(self, record: dict[str, Any]) -> None:
+        key = str(record.get("cache_key") or "")
+        if not key:
+            return
+        self.records[key] = record
+        if not self.path:
+            return
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        with self.path.open("a", encoding="utf-8") as fp:
+            fp.write(json.dumps(record, ensure_ascii=False) + "\n")
 
 
 def _round(value: float) -> float:
@@ -249,17 +296,73 @@ def _tool_risk(case: dict[str, Any], logic: LogicCheckResult, leakage: LeakageCh
     return value if value in {"low", "medium", "high", "critical"} else "low"
 
 
+def _prompt_hash(prompt_text: str) -> str:
+    return hashlib.sha256(prompt_text.encode("utf-8")).hexdigest()[:16]
+
+
+def _candidate_cache_key(case_id: str, model: str, prompt_text: str, trial_index: int = 1) -> str:
+    return f"{case_id}|{model}|{_prompt_hash(prompt_text)}|{trial_index}"
+
+
+def _candidate_answer(
+    baseline: RAGAgent,
+    case: dict[str, Any],
+    cache: CandidateCache | None,
+) -> CandidateResult:
+    external_content = baseline.get_external_content(case)
+    prompt_text = build_summary_prompt(str(case.get("user_query", "")), external_content)
+    model = str(baseline.model or "offline-vulnerable-rag")
+    cache_key = _candidate_cache_key(str(case.get("case_id", "")), model, prompt_text)
+    if baseline.config.use_api and cache:
+        cached = cache.get(cache_key)
+        if cached:
+            return CandidateResult(
+                text=str(cached.get("response_text") or ""),
+                prompt_text=prompt_text,
+                latency_ms=float(cached.get("latency_ms") or 0.0),
+                cache_hit=True,
+                cache_key=cache_key,
+                model=model,
+            )
+
+    started = time.perf_counter()
+    candidate = baseline.call_model(case, prompt_text, external_content)
+    latency_ms = (time.perf_counter() - started) * 1000
+    if baseline.config.use_api and cache:
+        cache.put(
+            {
+                "cache_key": cache_key,
+                "case_id": case.get("case_id"),
+                "model": model,
+                "prompt_hash": _prompt_hash(prompt_text),
+                "trial_index": 1,
+                "latency_ms": latency_ms,
+                "prompt_text": prompt_text,
+                "response_text": candidate,
+            }
+        )
+    return CandidateResult(
+        text=candidate,
+        prompt_text=prompt_text,
+        latency_ms=latency_ms,
+        cache_hit=False,
+        cache_key=cache_key,
+        model=model,
+    )
+
+
 def _run_variant_case(
     baseline: RAGAgent,
     case: dict[str, Any],
     variant: str,
     cfg: AblationConfig,
+    cache: CandidateCache | None = None,
 ) -> dict[str, Any]:
     started = time.perf_counter()
     case_id = str(case.get("case_id", ""))
     external_content = baseline.get_external_content(case)
-    prompt_text = build_summary_prompt(str(case.get("user_query", "")), external_content)
-    candidate = baseline.call_model(case, prompt_text, external_content)
+    candidate_result = _candidate_answer(baseline, case, cache)
+    candidate = candidate_result.text
     perception_signal, perception_windows = _scan_ablation_perception(case, variant)
     initial_intent = extract_intent(str(case.get("user_query", "")), case_id=case_id)
     full_reflection = reflect_intent(str(case.get("user_query", "")), external_content, initial_intent)
@@ -336,7 +439,13 @@ def _run_variant_case(
         "attack_type": case.get("attack_type"),
         "work_focus": case.get("work_focus"),
         "ablation_stress": case.get("ablation_stress", ""),
+        "prompt_text": candidate_result.prompt_text,
         "candidate_answer": candidate,
+        "candidate_model": candidate_result.model,
+        "candidate_cache_key": candidate_result.cache_key,
+        "candidate_cache_hit": candidate_result.cache_hit,
+        "candidate_api_call": baseline.config.use_api and not candidate_result.cache_hit,
+        "candidate_api_latency_ms": candidate_result.latency_ms if baseline.config.use_api else 0.0,
         "final_answer": final_answer,
         "verdict_action": verdict.action,
         "risk_score": verdict.risk_score,
@@ -386,6 +495,10 @@ def _metric_row(
     metrics = binary_classification_metrics(truth, defended) if rows else {"precision": 0.0, "recall": 0.0, "f1": 0.0}
     latencies = [row["latency_ms"] for row in rows]
     raw_latencies = [row["raw_latency_ms"] for row in rows]
+    candidate_api_latencies = [float(row["candidate_api_latency_ms"]) for row in rows if row.get("candidate_api_latency_ms")]
+    cacheable_rows = [row for row in rows if row.get("candidate_model") and row.get("candidate_model") != "offline-vulnerable-rag"]
+    api_call_count = sum(1 for row in rows if row.get("candidate_api_call"))
+    cache_hit_count = sum(1 for row in rows if row.get("candidate_cache_hit"))
     logic_rows = [row for row in rows if row["attack_type"] == "logic_trap"]
     leakage_rows = [row for row in rows if row["attack_type"] == "leakage"]
     external_goal_rows = [row for row in rows if row["full_reflection_contaminated"]]
@@ -413,6 +526,9 @@ def _metric_row(
         "p95_latency_ms": _round(_p95(latencies)),
         "avg_raw_latency_ms": _round(sum(raw_latencies) / len(raw_latencies)) if raw_latencies else 0.0,
         "p95_raw_latency_ms": _round(_p95(raw_latencies)),
+        "avg_candidate_api_latency_ms": _round(sum(candidate_api_latencies) / len(candidate_api_latencies)) if candidate_api_latencies else 0.0,
+        "candidate_api_call_count": api_call_count,
+        "candidate_cache_hit_rate": _round(cache_hit_count / len(cacheable_rows)) if cacheable_rows else 0.0,
         "avg_audit_depth": _round(sum(row["audit_depth"] for row in rows) / len(rows)) if rows else 0.0,
         "avg_audit_calls": _round(sum(row["audit_calls"] for row in rows) / len(rows)) if rows else 0.0,
         "avg_modeled_audit_latency_ms": _round(sum(row["modeled_audit_latency_ms"] for row in rows) / len(rows)) if rows else 0.0,
@@ -456,22 +572,29 @@ def _stage_pass(strategy_metrics: dict[str, dict[str, Any]], selected_variants: 
 
 def run_eval(args: argparse.Namespace) -> dict[str, Any]:
     selected_variants = VARIANTS if args.variant == "all" else [args.variant]
+    use_api = bool(getattr(args, "use_api", False))
     cfg = AblationConfig(
         perception_threshold=args.perception_threshold,
         stage=args.stage,
-        llm_audit_call_ms=args.llm_audit_call_ms,
+        llm_audit_call_ms=0.0 if use_api else args.llm_audit_call_ms,
         include_stress_cases=not args.disable_stress_cases,
+        use_api=use_api,
     )
     cases = _load_cases(args.input, include_stress_cases=cfg.include_stress_cases)
     log_path = Path(args.log_output)
     if log_path.exists() and not args.append:
         log_path.unlink()
-    baseline = RAGAgent(RAGAgentConfig(use_api=False))
+    cache_path_arg = getattr(args, "candidate_cache_path", DEFAULT_API_CACHE)
+    cache_path = Path(cache_path_arg) if cache_path_arg else None
+    if bool(getattr(args, "refresh_api_cache", False)) and cache_path and cache_path.exists():
+        cache_path.unlink()
+    candidate_cache = CandidateCache(cache_path) if use_api else None
+    baseline = RAGAgent(RAGAgentConfig(use_api=use_api, model=getattr(args, "model", None)))
 
     rows: list[dict[str, Any]] = []
     for variant in selected_variants:
         for case in cases:
-            row = _run_variant_case(baseline, case, variant, cfg)
+            row = _run_variant_case(baseline, case, variant, cfg, candidate_cache)
             rows.append(row)
             append_jsonl(
                 log_path,
@@ -535,6 +658,7 @@ def run_eval(args: argparse.Namespace) -> dict[str, Any]:
         "stress_case_count": sum(1 for case in cases if case.get("ablation_stress")),
         "metrics_output": args.metrics_output,
         "log_output": args.log_output,
+        "candidate_cache_path": str(cache_path) if cache_path else "",
     }
 
 
@@ -547,6 +671,10 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--stage", default="p7_ablation_eval")
     parser.add_argument("--perception-threshold", type=float, default=0.35)
     parser.add_argument("--llm-audit-call-ms", type=float, default=80.0)
+    parser.add_argument("--use-api", action="store_true")
+    parser.add_argument("--model", default=None)
+    parser.add_argument("--candidate-cache-path", default=DEFAULT_API_CACHE)
+    parser.add_argument("--refresh-api-cache", action="store_true")
     parser.add_argument("--disable-stress-cases", action="store_true")
     parser.add_argument("--append", action="store_true")
     parser.add_argument("--require-stage-pass", action="store_true")

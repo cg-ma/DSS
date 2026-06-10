@@ -170,6 +170,8 @@ def run_eval(args: argparse.Namespace) -> dict[str, Any]:
                         "strategy": strategy,
                         "label": case.get("label"),
                         "attack_type": case.get("attack_type"),
+                        "prompt_text": result.prompt_text,
+                        "response_text": result.final_answer,
                         "final_answer": result.final_answer,
                         "attack_success": row["attack_success"],
                         "clean_success": row["clean_success"],
