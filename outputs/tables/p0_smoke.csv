@@ -1,0 +1,2 @@
+case_id,stage,model,latency_ms,risk_score,verdict,success,error,details
+smoke_0001,smoke,none,0.0,0.05,allow,True,,{'source_id': 'local_smoke'}

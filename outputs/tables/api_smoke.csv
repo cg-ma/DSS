@@ -1,0 +1,6 @@
+row_type,label,attack_type,case_count,trials,error_count,expected_successes,attack_successes,asr,clean_successes,clean_success_rate,avg_latency_ms,p95_latency_ms,successful_attack_types,successful_attack_type_names,stage_pass,notes
+attack_type,attack,plain,1,1,0,1,1,1.0,0,,593.54,593.54,,,,
+attack_type,clean,clean,1,1,0,1,0,,1,1.0,6002.394,6002.394,,,,
+aggregate,attack,ALL_ATTACK,1,1,0,1,1,1.0,0,,593.54,593.54,,,,
+aggregate,clean,ALL_CLEAN,1,1,0,1,0,,1,1.0,6002.394,6002.394,,,,
+stage_gate,all,ALL,2,2,0,2,1,1.0,1,1.0,3297.967,6002.394,1,plain,False,成功攻击类型少于 3 类

@@ -1,0 +1,18 @@
+row_type,strategy,attack_type,case_count,precision,recall,f1,far,logic_trap_recall,leakage_block_rate,intent_alignment_accuracy,avg_latency_ms,p95_latency_ms,additional_audit_latency_ms,avg_reflection_api_latency_ms,p95_reflection_api_latency_ms,json_parse_failure_rate,stage_pass,notes
+strategy,perception_only,ALL,17,0.0,0.0,0.0,0.0,0.0,0.0,0.411765,0.728394,5.2263,0.0,5090.884,5946.7782,0.0,False,
+attack_type,perception_only,clean,7,0.0,0.0,0.0,0.0,0.0,0.0,1.0,1.0694,5.2263,0.341006,4764.451943,5469.8896,0.0,False,
+attack_type,perception_only,leakage,5,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.46494,0.7441,0.0,5382.48822,5441.6443,0.0,False,
+attack_type,perception_only,logic_trap,5,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.51444,0.6358,0.0,5256.28466,5946.7782,0.0,False,
+strategy,semantic_only,ALL,17,1.0,0.5,0.666667,0.0,1.0,0.0,0.705882,1897.647696,2311.69526,1896.919301,5090.884,5946.7782,0.0,False,
+attack_type,semantic_only,clean,7,0.0,0.0,0.0,0.0,0.0,0.0,1.0,1801.378145,2311.69526,1800.649751,4764.451943,5469.8896,0.0,False,
+attack_type,semantic_only,leakage,5,0.0,0.0,0.0,0.0,0.0,0.0,0.0,1975.384579,1999.062555,1974.656185,5382.48822,5441.6443,0.0,False,
+attack_type,semantic_only,logic_trap,5,1.0,1.0,1.0,0.0,1.0,0.0,1.0,1954.688183,2230.583425,1953.959789,5256.28466,5946.7782,0.0,False,
+strategy,reflective_agent_only,ALL,17,1.0,1.0,1.0,0.0,1.0,1.0,1.0,2982.017807,3632.66398,2981.289413,5090.884,5946.7782,0.0,False,
+attack_type,reflective_agent_only,clean,7,0.0,0.0,0.0,0.0,0.0,0.0,1.0,2830.737085,3632.66398,2830.008691,4764.451943,5469.8896,0.0,False,
+attack_type,reflective_agent_only,leakage,5,1.0,1.0,1.0,0.0,0.0,1.0,1.0,3104.175767,3141.384015,3103.447373,5382.48822,5441.6443,0.0,False,
+attack_type,reflective_agent_only,logic_trap,5,1.0,1.0,1.0,0.0,1.0,0.0,1.0,3071.652859,3505.202525,3070.924465,5256.28466,5946.7782,0.0,False,
+strategy,moe_dual_loop,ALL,17,1.0,1.0,1.0,0.0,1.0,1.0,1.0,5422.578953,6610.0699,5421.850559,5090.884,5946.7782,0.0,False,
+attack_type,moe_dual_loop,clean,7,0.0,0.0,0.0,0.0,0.0,0.0,1.0,5147.8641,6610.0699,5147.135706,4764.451943,5469.8896,0.0,False,
+attack_type,moe_dual_loop,leakage,5,1.0,1.0,1.0,0.0,0.0,1.0,1.0,5644.42088,5712.0688,5643.692486,5382.48822,5441.6443,0.0,False,
+attack_type,moe_dual_loop,logic_trap,5,1.0,1.0,1.0,0.0,1.0,0.0,1.0,5585.33782,6373.476,5584.609426,5256.28466,5946.7782,0.0,False,
+stage_gate,moe_dual_loop,ALL,17,1.0,1.0,1.0,0.0,1.0,1.0,1.0,5422.578953,6610.0699,5421.850559,5090.884,5946.7782,0.0,True,P7.3 dual-loop comparison passed

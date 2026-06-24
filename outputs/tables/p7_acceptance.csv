@@ -1,0 +1,14 @@
+artifact_type,name,path,exists,stage_pass,notes
+table,attack_reproduction,outputs\tables\attack_reproduction.csv,True,True,stage gate passed
+table,perception_metrics,outputs\tables\perception_metrics.csv,True,True,stage gate passed
+table,dual_loop_metrics,outputs\tables\dual_loop_metrics.csv,True,True,stage gate passed
+table,end_to_end_metrics,outputs\tables\end_to_end_metrics.csv,True,True,stage gate passed
+table,ablation_metrics,outputs\tables\ablation_metrics.csv,True,True,stage gate passed
+table,arbitration_latency,outputs\tables\arbitration_latency.csv,True,True,stage gate passed
+figure,architecture,outputs\figures\architecture_overview.png,True,True,generated
+figure,perception,outputs\figures\perception_detection_comparison.png,True,True,generated
+figure,dual_loop,outputs\figures\dual_loop_blind_spot.png,True,True,generated
+figure,end_to_end,outputs\figures\end_to_end_asr_far.png,True,True,generated
+figure,latency,outputs\figures\latency_by_input_length.png,True,True,generated
+figure,arbitration,outputs\figures\dynamic_arbitration_depth.png,True,True,generated
+stage_gate,p7_acceptance,outputs\tables\p7_acceptance.csv,True,True,P7.7 acceptance passed

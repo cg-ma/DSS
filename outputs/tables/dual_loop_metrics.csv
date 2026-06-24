@@ -1,0 +1,18 @@
+row_type,strategy,attack_type,case_count,precision,recall,f1,far,logic_trap_recall,leakage_block_rate,intent_alignment_accuracy,avg_latency_ms,p95_latency_ms,additional_audit_latency_ms,stage_pass,notes
+strategy,perception_only,ALL,17,0.0,0.0,0.0,0.0,0.0,0.0,0.411765,0.603276,6.0156,0.0,False,
+attack_type,perception_only,clean,7,0.0,0.0,0.0,0.0,0.0,0.0,1.0,1.049629,6.0156,0.446352,False,
+attack_type,perception_only,leakage,5,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.26788,0.3463,0.0,False,
+attack_type,perception_only,logic_trap,5,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.31378,0.4254,0.0,False,
+strategy,semantic_only,ALL,17,1.0,0.5,0.666667,0.0,1.0,0.0,0.705882,0.060534,0.397075,0.0,False,
+attack_type,semantic_only,clean,7,0.0,0.0,0.0,0.0,0.0,0.0,1.0,0.079475,0.397075,0.0,False,
+attack_type,semantic_only,leakage,5,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.043358,0.099225,0.0,False,
+attack_type,semantic_only,logic_trap,5,1.0,1.0,1.0,0.0,1.0,0.0,1.0,0.051191,0.112805,0.0,False,
+strategy,reflective_agent_only,ALL,17,1.0,1.0,1.0,0.0,1.0,1.0,1.0,0.095124,0.623975,0.0,False,
+attack_type,reflective_agent_only,clean,7,0.0,0.0,0.0,0.0,0.0,0.0,1.0,0.124889,0.623975,0.0,False,
+attack_type,reflective_agent_only,leakage,5,1.0,1.0,1.0,0.0,0.0,1.0,1.0,0.068134,0.155925,0.0,False,
+attack_type,reflective_agent_only,logic_trap,5,1.0,1.0,1.0,0.0,1.0,0.0,1.0,0.080443,0.177265,0.0,False,
+strategy,moe_dual_loop,ALL,17,1.0,1.0,1.0,0.0,1.0,1.0,1.0,0.776229,7.1501,0.172953,False,
+attack_type,moe_dual_loop,clean,7,0.0,0.0,0.0,0.0,0.0,0.0,1.0,1.2767,7.1501,0.673424,False,
+attack_type,moe_dual_loop,leakage,5,1.0,1.0,1.0,0.0,0.0,1.0,1.0,0.39176,0.6298,0.0,False,
+attack_type,moe_dual_loop,logic_trap,5,1.0,1.0,1.0,0.0,1.0,0.0,1.0,0.46004,0.6171,0.0,False,
+stage_gate,moe_dual_loop,ALL,17,1.0,1.0,1.0,0.0,1.0,1.0,1.0,0.776229,7.1501,0.172953,True,P7.3 dual-loop comparison passed

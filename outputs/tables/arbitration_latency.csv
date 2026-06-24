@@ -1,0 +1,12 @@
+row_type,policy,risk_level,sample_count,avg_risk_score,allow_rate,sanitize_rate,audit_action_rate,block_rate,audit_rate,avg_audit_depth,max_audit_depth,avg_audit_count,avg_llm_audit_calls,avg_ttft_ms,p95_ttft_ms,avg_e2e_latency_ms,p95_e2e_latency_ms,avg_raw_latency_ms,p95_raw_latency_ms,stage_pass,notes
+policy,static_threshold,ALL,24,0.596667,0.041667,0.0,0.666667,0.291667,0.958333,1.25,2,0.958333,0.0,16.791667,17.0,43.512337,48.0105,0.012337,0.0187,False,
+risk_level,static_threshold,low,6,0.241667,0.166667,0.0,0.833333,0.0,0.833333,0.833333,1,0.833333,0.0,16.166667,17.0,41.014767,42.0178,0.014767,0.0187,False,
+risk_level,static_threshold,medium,6,0.445,0.0,0.0,1.0,0.0,1.0,1.0,1,1.0,0.0,17.0,17.0,42.012867,42.0197,0.012867,0.0197,False,
+risk_level,static_threshold,high,6,0.781667,0.0,0.0,0.833333,0.166667,1.0,1.166667,2,1.0,0.0,17.0,17.0,43.011233,48.0105,0.011233,0.013,False,
+risk_level,static_threshold,critical,6,0.918333,0.0,0.0,0.0,1.0,1.0,2.0,2,1.0,0.0,17.0,17.0,48.010483,48.0114,0.010483,0.0114,False,
+policy,dynamic_arbitration,ALL,24,0.653056,0.25,0.208333,0.041667,0.5,0.75,2.291667,4,0.75,0.5,29.75,45.0,89.768129,140.0248,0.018129,0.0299,False,
+risk_level,dynamic_arbitration,low,6,0.18233,1.0,0.0,0.0,0.0,0.0,0.0,0,0.0,0.0,12.0,12.0,36.021383,36.0461,0.021383,0.0461,False,
+risk_level,dynamic_arbitration,medium,6,0.486326,0.0,0.833333,0.166667,0.0,1.0,1.166667,2,1.0,0.0,17.0,17.0,43.014,48.0138,0.014,0.0152,False,
+risk_level,dynamic_arbitration,high,6,0.953211,0.0,0.0,0.0,1.0,1.0,4.0,4,1.0,1.0,45.0,45.0,140.0201,140.0299,0.0201,0.0299,False,
+risk_level,dynamic_arbitration,critical,6,0.990357,0.0,0.0,0.0,1.0,1.0,4.0,4,1.0,1.0,45.0,45.0,140.017033,140.02,0.017033,0.02,False,
+stage_gate,dynamic_arbitration,ALL,24,0.653056,0.25,0.208333,0.041667,0.5,0.75,2.291667,4,0.75,0.5,29.75,45.0,89.768129,140.0248,0.018129,0.0299,True,P7.6 arbitration latency passed

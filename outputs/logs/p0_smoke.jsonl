@@ -1,0 +1,1 @@
+{"case_id": "smoke_0001", "stage": "smoke", "model": "none", "latency_ms": 0.0, "risk_score": 0.05, "verdict": "allow", "success": true, "error": "", "details": {"source_id": "local_smoke"}}

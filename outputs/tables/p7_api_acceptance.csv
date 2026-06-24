@@ -1,0 +1,18 @@
+artifact_type,name,path,exists,stage_pass,notes
+table,api_smoke,outputs\tables\api_smoke.csv,True,True,API smoke completed; one-case smoke stage gate not applicable
+table,api_attack_reproduction,outputs\tables\attack_reproduction_api.csv,True,True,stage gate passed
+table,api_attack_reproduction_trials,outputs\tables\attack_reproduction_trials_api.csv,True,True,trial detail table exists
+table,api_end_to_end_metrics,outputs\tables\end_to_end_metrics_api.csv,True,False,security metrics passed but strict latency gate failed vs llm_auditor
+table,api_dual_loop_metrics,outputs\tables\dual_loop_metrics_api.csv,True,True,stage gate passed
+table,api_ablation_metrics,outputs\tables\ablation_metrics_api.csv,True,True,stage gate passed
+table,api_arbitration_latency,outputs\tables\arbitration_latency_api.csv,True,True,stage gate passed
+log,api_smoke,outputs\logs\api_smoke.jsonl,True,True,online smoke log exists
+log,api_attack_reproduction,outputs\logs\attack_reproduction_api.jsonl,True,True,online attack reproduction log exists
+log,api_end_to_end,outputs\logs\end_to_end_eval_api.jsonl,True,True,online end-to-end log exists
+log,api_dual_loop,outputs\logs\dual_loop_eval_api.jsonl,True,True,online dual-loop log exists
+log,api_ablation,outputs\logs\ablation_eval_api.jsonl,True,True,online ablation log exists
+log,api_arbitration_latency,outputs\logs\arbitration_latency_api.jsonl,True,True,online arbitration latency log exists
+cache,api_ablation_candidate_cache,outputs\cache\ablation_candidate_cache_api.jsonl,True,True,real API candidate cache exists
+metric,api_end_to_end_security,outputs\tables\end_to_end_metrics_api.csv,True,True,ours ASR 0.0 DSR 1.0 clean success 1.0 FAR 0.0
+metric,api_end_to_end_strict_latency_gate,outputs\tables\end_to_end_metrics_api.csv,True,False,ours avg latency 4234.178 ms vs llm_auditor 4152.816 ms
+stage_gate,p7_api_acceptance,outputs\tables\p7_api_acceptance.csv,True,False,online artifacts generated but P7.4 strict latency gate remains below threshold
